@@ -1,0 +1,6 @@
+spacy
+pandas
+matplotlib
+cartopy
+psycopg2
+beautifulsoup4
