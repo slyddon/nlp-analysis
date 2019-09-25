@@ -8,7 +8,7 @@ nlp = spacy.load("en")
 
 class Paragraph:
     def __init__(self, text):
-        self.text = text.strip().replace("\n", " ")
+        self.text = nlp(text.strip().replace("\n", " "))
         self._get_ents()
 
     def _get_ents(self):
@@ -18,7 +18,6 @@ class Paragraph:
         - LOC: Location
         - PERSON
         """
-        doc = nlp(self.text)
-        ents = doc.ents
+        ents = self.text.ents
         self.locations = [item.text for item in ents if item.label_ in ["GPE", "LOC"]]
         self.people = [item.text for item in ents if item.label_ in ["PERSON"]]
