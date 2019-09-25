@@ -12,7 +12,7 @@ class Paragraph:
         self._get_ents()
 
     def _get_ents(self):
-        """ Get entities in text
+        """ Get entities
 
         - GPE: Geo-political entity
         - LOC: Location

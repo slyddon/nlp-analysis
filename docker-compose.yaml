@@ -9,7 +9,7 @@ services:
     image: 80-days-notebook
     container_name: 80-days-notebook
     ports:
-      - "8888:8888"
+      - "8889:8888"
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_TOKEN=p

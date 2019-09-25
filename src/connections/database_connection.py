@@ -20,7 +20,7 @@ class DatabaseConnection:
         :param str user: DB user
         :param str password: DB password
         :param str host: DB host - if using docker this is the name of the service
-        :param numeric port: DB port
+        :param str port: DB port
         :return psycopg2.Connection: DB connection instance
         """
         conn = psycopg2.connect(host=host, port=port, user=user, password=password)
@@ -114,7 +114,7 @@ class DatabaseConnection:
         sql = """
             INSERT INTO locations (name, lon, lat)
             VALUES(%s, %s, %s)
-            """
+        """
         cur = self.conn.cursor()
         cur.execute(sql, location)
         self.conn.commit()
