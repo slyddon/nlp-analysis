@@ -158,3 +158,38 @@ class DatabaseConnection:
             """
         )
         return [l[0] for l in cur.fetchall()]
+
+    def get_filter_locations(self) -> List[str]:
+        """ Get names of locations that appear sufficiently frequently and 
+            are not of an undesired type
+
+        :return iterable(str): location names
+        """
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT right_t.name 
+            FROM (
+                SELECT class, type 
+                FROM (
+                    SELECT class, type, Count(name) as count 
+                    FROM locations 
+                    GROUP BY class, type
+                ) AS grouped 
+                WHERE (
+                    count > 5 AND 
+                    type != 'continent' AND 
+                    class != 'highway'
+                ) OR (
+                    class IN ('natural', 'waterway')
+                ) OR (
+                    type IN ('sea', 'ocean')
+                )
+            ) AS left_t 
+            LEFT OUTER JOIN (
+                SELECT * from locations
+            ) AS right_t 
+            ON (right_t.class = left_t.class AND right_t.type = left_t.type)
+            """
+        )
+        return [l[0] for l in cur.fetchall()]

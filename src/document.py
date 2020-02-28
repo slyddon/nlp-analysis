@@ -114,5 +114,6 @@ class Document:
                     "has_fogg": loc[1],
                 }
             )
-
-        return location_info
+        # remove uncommon or unwanted locations
+        filter_locations = self.db.get_filter_locations()
+        return [l for l in location_info if l["location"] in filter_locations]
