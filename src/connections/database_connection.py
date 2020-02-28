@@ -37,7 +37,9 @@ class DatabaseConnection:
             CREATE TABLE IF NOT EXISTS locations (
                 name varchar,
                 lon numeric,
-                lat numeric
+                lat numeric,
+                class varchar,
+                type varchar
             )
             """
         )
@@ -87,11 +89,11 @@ class DatabaseConnection:
     def add_location(self, location: Tuple[str, float, float]) -> None:
         """ Add location to db
 
-        :param iterable(str, numeric, numeric) location: (name, loc, lat)
+        :param iterable(str, numeric, numeric, str, str) location: (name, lon, lat, class, type)
         """
         sql = """
-            INSERT INTO locations (name, lon, lat)
-            VALUES(%s, %s, %s)
+            INSERT INTO locations (name, lon, lat, class, type)
+            VALUES(%s, %s, %s, %s, %s)
         """
         cur = self.conn.cursor()
         cur.execute(sql, location)
@@ -112,11 +114,11 @@ class DatabaseConnection:
         )
         return [l[0] for l in cur.fetchall()]
 
-    def get_location(self, location: str) -> Tuple[str, float, float]:
+    def get_location(self, location: str) -> Tuple[str, float, float, str, str]:
         """ Get location information
 
         :param str location: location to retrieve
-        :return tuple: (name, loc, lat)
+        :return tuple: (name, loc, lat, class, type)
         """
         cur = self.conn.cursor()
         cur.execute(
