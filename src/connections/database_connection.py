@@ -86,7 +86,7 @@ class DatabaseConnection:
         )
         return cur.fetchall()
 
-    def add_location(self, location: Tuple[str, float, float]) -> None:
+    def add_location(self, location: Tuple[str, float, float, str, str]) -> None:
         """ Add location to db
 
         :param iterable(str, numeric, numeric, str, str) location: (name, lon, lat, class, type)
@@ -99,6 +99,9 @@ class DatabaseConnection:
         cur.execute(sql, location)
         self.conn.commit()
         cur.close()
+
+        if location[0] in self.get_unknown_locations():
+            self._remove_unknown_location(location[0])
 
     def get_locations(self) -> List[str]:
         """ Get names of all locations in db
@@ -145,6 +148,20 @@ class DatabaseConnection:
         self.conn.commit()
         cur.close()
 
+    def _remove_unknown_location(self, location: str) -> None:
+        """ Remove location from unknow list
+
+        :param str location: name
+        """
+        sql = """
+            DELETE FROM unknown_locations WHERE
+            name = %s
+        """
+        cur = self.conn.cursor()
+        cur.execute(sql, (location,))
+        self.conn.commit()
+        cur.close()
+
     def get_unknown_locations(self) -> List[str]:
         """ Get names of all unknown locations in db
 
@@ -160,8 +177,8 @@ class DatabaseConnection:
         return [l[0] for l in cur.fetchall()]
 
     def get_filter_locations(self) -> List[str]:
-        """ Get names of locations that appear sufficiently frequently and 
-            are not of an undesired type
+        """ Get names of locations that appear sufficiently 
+            frequently and are not of an undesired type
 
         :return iterable(str): location names
         """
@@ -183,7 +200,7 @@ class DatabaseConnection:
                 ) OR (
                     class IN ('natural', 'waterway')
                 ) OR (
-                    type IN ('sea', 'ocean')
+                    type IN ('sea', 'ocean', 'lighthouse')
                 )
             ) AS left_t 
             LEFT OUTER JOIN (
