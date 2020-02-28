@@ -1,12 +1,11 @@
-# Author: Sam Lyddon
-# Date: 19/08/2019
-
+import json
 import re
 from collections import Counter
-import json
+from typing import Dict, List, Tuple
+
 import pandas as pd
 
-from . import RequestHandler, DatabaseConnection, Chapter
+from . import Chapter, DatabaseConnection, Paragraph, RequestHandler
 
 HOST = "db"
 ALLOWED_METADATA = ["title", "author", "release date", "last updated", "language"]
@@ -31,27 +30,25 @@ class Document:
             if match[0].lower() in ALLOWED_METADATA:
                 setattr(self, match[0].replace(" ", "_").lower(), match[1])
 
-    def _get_chapters(self):
+    def _get_chapters(self) -> List[Chapter]:
         """ Split prose into chapters
 
         """
         # remove end
         prose = re.split("End of Project Gutenberg", self.text)
         # split up chapters
-        chapters = re.split("Chapter \w+", prose[0])
+        chapters = re.split(r"Chapter \w+", prose[0])
         chapters = [Chapter(chapter) for chapter in chapters[1:]]
         return chapters
 
-    def _get_paragraphs(self):
+    def _get_paragraphs(self) -> List[Paragraph]:
         """ Split paragraphs in chapters
 
         """
-        paragraphs = []
-        for chapter in self.chapters:
-            paragraphs += chapter.paragraphs
+        paragraphs = [p for c in self.chapters for p in c.paragraphs]
         return paragraphs
 
-    def _get_coords(self, location):
+    def _get_coords(self, location) -> Tuple[float, float]:
         """ Get coords of a specified location
 
         - check in db
@@ -60,9 +57,9 @@ class Document:
         :param str location: location to get
         :return numeric, numeric: lon, lat
         """
-        if location in self.db.get_all_locations():
+        if location in self.db.get_locations():
             lon, lat = self.db.get_location(location)[1:3]
-        else:
+        elif location not in self.db.get_unknown_locations():
             # ping open street api
             url = "{}/search?q='{}'&format=json".format(
                 OPEN_STREET_URL, location.replace(" ", "-")
@@ -73,15 +70,17 @@ class Document:
             # get first location returned
             lon, lat = response_dict[0]["lon"], response_dict[0]["lat"]
             self.db.add_location((location, lon, lat))
+        else:
+            raise ValueError(f"{location} could not be found")
         return lon, lat
 
-    def get_locations(self):
+    def get_locations(self) -> List[Dict]:
         """ Get all locations mentioned in the document
 
         :return list(dict):
         """
         locations = [
-            (loc, "Fogg" in para.people)
+            (loc, para.mentions_fogg)
             for para in self.paragraphs
             for loc in para.locations
         ]
@@ -90,8 +89,14 @@ class Document:
         for loc, count in Counter(locations).items():
             try:
                 lon, lat = self._get_coords(loc[0])
-            except IndexError as err:
-                print("WARNING: {} could not be found.".format(loc[0]))
+            except IndexError:
+                self.db.add_unknown_location(loc[0])
+                print(
+                    f"WARNING: {loc[0]} could not be found. Added to unknown locations."
+                )
+                continue
+            except ValueError:
+                print(f"WARNING: {loc[0]} could not be found.")
                 continue
             location_info.append(
                 {
