@@ -1,14 +1,12 @@
-# Author: Sam Lyddon
-# Date: 19/08/2019
-# Request handler class for communicating with APIs
-
 import json
 import urllib.request
+
 from bs4 import BeautifulSoup as Soup
 
 
-class RequestHandler(object):
-    def call(self, url, method, data_dict=None):
+class RequestHandler:
+    @staticmethod
+    def call(url, method, data_dict=None):
         """ Perform HTTP request
 
         :param str url: url to call
@@ -32,7 +30,8 @@ class RequestHandler(object):
         except urllib.error.HTTPError as err:
             raise err
 
-    def _clean_text(self, web_page):
+    @staticmethod
+    def _clean_text(web_page):
         """ Extract relevant text from web page
 
         :param str web_page: html to parse
@@ -52,4 +51,3 @@ class RequestHandler(object):
         web_page = response.read()
         text = self._clean_text(web_page)
         return text
-
