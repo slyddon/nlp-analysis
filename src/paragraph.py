@@ -35,3 +35,16 @@ class Paragraph:
         self.locations = [item.text for item in ents if item.label_ in ["GPE", "LOC"]]
         self.people = [item.text for item in ents if item.label_ in ["PERSON"]]
         self.mentions_fogg = any(["Fogg" in p for p in self.people])
+
+    def extract_lemma(self, word_len=3) -> List[str]:
+        return [
+            w.lemma_
+            for w in self.text
+            if not (
+                w.is_space
+                or w.is_punct
+                or w.is_digit
+                or w.is_stop
+                or len(w.lemma_) < word_len
+            )
+        ]
