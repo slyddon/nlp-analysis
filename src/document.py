@@ -9,7 +9,6 @@ from . import Chapter, DatabaseConnection, Paragraph, RequestHandler
 
 HOST = "db"
 ALLOWED_METADATA = ["title", "author", "release date", "last updated", "language"]
-OPEN_STREET_URL = "https://nominatim.openstreetmap.org"
 
 
 class Document:
@@ -61,22 +60,12 @@ class Document:
             lon, lat, location_class, location_type = self.db.get_location(location)[1:]
         elif location not in self.db.get_unknown_locations():
             # ping open street api
-            url = "{}/search?q='{}'&format=json".format(
-                OPEN_STREET_URL, location.replace(" ", "-")
-            )
             rq = RequestHandler()
-            response = rq.call(url, "GET")
-            response_dict = json.loads(response.read().decode("utf-8"))
-            # get first location returned
-            lon, lat, location_class, location_type = (
-                response_dict[0]["lon"],
-                response_dict[0]["lat"],
-                response_dict[0]["class"],
-                response_dict[0]["type"],
-            )
+            lon, lat, location_class, location_type = rq.get_location_info(location)
+            # add information to db
             self.db.add_location((location, lon, lat, location_class, location_type))
         else:
-            raise ValueError(f"{location} could not be found")
+            raise ValueError(f"WARNING: {location} could not be found")
         return float(lon), float(lat), location_class, location_type
 
     def get_locations(self) -> List[Dict]:
@@ -100,8 +89,8 @@ class Document:
                     f"WARNING: {loc[0]} could not be found. Added to unknown locations."
                 )
                 continue
-            except ValueError:
-                print(f"WARNING: {loc[0]} could not be found.")
+            except ValueError as err:
+                print(str(err))
                 continue
             location_info.append(
                 {
