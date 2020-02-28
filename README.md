@@ -12,3 +12,18 @@ To set up the development environment follow these steps. We presume you have do
 * Run `docker-compose up --build` to bring up the containers and build the images.
 
 A jupyter notebook instance is exposed on port 8889. A postgres db instance is exposed on port 5432.
+
+### Project structure
+```
+├── README.md                   <- The top-level README for developers using this project
+├── .gitignore                  <- git-ignore configuration file
+├── Dockerfile                  <- Jupyter notebook dockerfile
+├── requirements.txt            <- Package requirements
+├── docker-compose.yaml         <- Docker-compose setup
+│
+├── data                        <- Data folder
+├── notebooks                   <- Analysis notebooks
+│
+├── src                         <- Python scripts
+│   ├── connections             <- Folder containing methods for connecting to data sources
+```
