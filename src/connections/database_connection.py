@@ -1,7 +1,5 @@
-# Author: Sam Lyddon
-# Date: 19/08/2019
-
 import psycopg2
+from typing import List, Tuple
 
 
 class DatabaseConnection:
@@ -14,20 +12,23 @@ class DatabaseConnection:
         # init tables
         self._create_loc_table()
 
-    def _connect(self, user, password, host, port):
+    @staticmethod
+    def _connect(
+        user: str, password: str, host: str, port: int
+    ) -> psycopg2.extensions.connection:
         """ Connect to postgres instance
 
         :param str user: DB user
         :param str password: DB password
         :param str host: DB host - if using docker this is the name of the service
-        :param str port: DB port
-        :return psycopg2.Connection: DB connection instance
+        :param int port: DB port
+        :return psycopg2.extensions.connection: DB connection instance
         """
         conn = psycopg2.connect(host=host, port=port, user=user, password=password)
         return conn
 
-    def _create_loc_table(self):
-        """ Create location db table
+    def _create_loc_table(self) -> None:
+        """ Create location and unknown locations db tables
 
         """
         cur = self.conn.cursor()
@@ -40,17 +41,24 @@ class DatabaseConnection:
             )
             """
         )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS unknown_locations (
+                name varchar
+            )
+            """
+        )
         self.conn.commit()
         cur.close()
 
-    def copy_from_csv(self, file, table):
+    def copy_from_csv(self, file: str, table: str) -> None:
         """ Insert data from pre-existing csv file
 
         :param str file: csv to copy from
         :param str table: table to copy to
         """
-        copy_sql = """
-           COPY locations 
+        copy_sql = f"""
+           COPY {table} 
            FROM stdin WITH CSV HEADER
            DELIMITER as ','
            """
@@ -60,7 +68,7 @@ class DatabaseConnection:
         self.conn.commit()
         cur.close()
 
-    def get_table_names(self):
+    def get_table_names(self) -> List[str]:
         """ Get tables in db
 
         :return iterable(str): table names
@@ -76,7 +84,21 @@ class DatabaseConnection:
         )
         return cur.fetchall()
 
-    def get_all_locations(self):
+    def add_location(self, location: Tuple[str, float, float]) -> None:
+        """ Add location to db
+
+        :param iterable(str, numeric, numeric) location: (name, loc, lat)
+        """
+        sql = """
+            INSERT INTO locations (name, lon, lat)
+            VALUES(%s, %s, %s)
+        """
+        cur = self.conn.cursor()
+        cur.execute(sql, location)
+        self.conn.commit()
+        cur.close()
+
+    def get_locations(self) -> List[str]:
         """ Get names of all locations in db
 
         :return iterable(str): location names
@@ -90,7 +112,7 @@ class DatabaseConnection:
         )
         return [l[0] for l in cur.fetchall()]
 
-    def get_location(self, location):
+    def get_location(self, location: str) -> Tuple[str, float, float]:
         """ Get location information
 
         :param str location: location to retrieve
@@ -98,24 +120,39 @@ class DatabaseConnection:
         """
         cur = self.conn.cursor()
         cur.execute(
-            f"""
+            """
             SELECT *
             FROM locations
-            WHERE name = '{location}'
-            """
+            WHERE name = %s
+            """,
+            (location,),
         )
         return cur.fetchone()
 
-    def add_location(self, location):
+    def add_unknown_location(self, location: str) -> None:
         """ Add location to db
 
-        :param iterable(str, numeric, numeric) location: (name, loc, lat)
+        :param str location: name
         """
         sql = """
-            INSERT INTO locations (name, lon, lat)
-            VALUES(%s, %s, %s)
+            INSERT INTO unknown_locations (name)
+            VALUES(%s)
         """
         cur = self.conn.cursor()
-        cur.execute(sql, location)
+        cur.execute(sql, (location,))
         self.conn.commit()
         cur.close()
+
+    def get_unknown_locations(self) -> List[str]:
+        """ Get names of all unknown locations in db
+
+        :return iterable(str): location names
+        """
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT name
+            FROM unknown_locations
+            """
+        )
+        return [l[0] for l in cur.fetchall()]
