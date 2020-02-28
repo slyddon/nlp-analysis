@@ -1,7 +1,11 @@
 jupyterlab>=1.1
 spacy
+gensim
 pandas
 matplotlib
 cartopy
 psycopg2
 beautifulsoup4
+nb_black
+isort
+watermark
