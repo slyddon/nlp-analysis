@@ -4,6 +4,7 @@
 .jupyter
 .local
 .cache
+Untitled*.ipynb
 
 # data
 data/*.txt

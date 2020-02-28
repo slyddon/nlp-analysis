@@ -9,7 +9,6 @@ from . import Chapter, DatabaseConnection, Paragraph, RequestHandler
 
 HOST = "db"
 ALLOWED_METADATA = ["title", "author", "release date", "last updated", "language"]
-OPEN_STREET_URL = "https://nominatim.openstreetmap.org"
 
 
 class Document:
@@ -48,31 +47,26 @@ class Document:
         paragraphs = [p for c in self.chapters for p in c.paragraphs]
         return paragraphs
 
-    def _get_coords(self, location) -> Tuple[float, float]:
+    def _get_coords(self, location) -> Tuple[float, float, str, str]:
         """ Get coords of a specified location
 
         - check in db
         - ping openstreetmap API
 
         :param str location: location to get
-        :return numeric, numeric: lon, lat
+        :return numeric, numeric, str, str: lon, lat, location_class, location_type
         """
         if location in self.db.get_locations():
-            lon, lat = self.db.get_location(location)[1:3]
+            lon, lat, location_class, location_type = self.db.get_location(location)[1:]
         elif location not in self.db.get_unknown_locations():
             # ping open street api
-            url = "{}/search?q='{}'&format=json".format(
-                OPEN_STREET_URL, location.replace(" ", "-")
-            )
             rq = RequestHandler()
-            response = rq.call(url, "GET")
-            response_dict = json.loads(response.read().decode("utf-8"))
-            # get first location returned
-            lon, lat = response_dict[0]["lon"], response_dict[0]["lat"]
-            self.db.add_location((location, lon, lat))
+            lon, lat, location_class, location_type = rq.get_location_info(location)
+            # add information to db
+            self.db.add_location((location, lon, lat, location_class, location_type))
         else:
-            raise ValueError(f"{location} could not be found")
-        return lon, lat
+            raise ValueError(f"WARNING: {location} could not be found")
+        return float(lon), float(lat), location_class, location_type
 
     def get_locations(self) -> List[Dict]:
         """ Get all locations mentioned in the document
@@ -88,15 +82,15 @@ class Document:
         location_info = []
         for loc, count in Counter(locations).items():
             try:
-                lon, lat = self._get_coords(loc[0])
+                lon, lat, location_class, location_type = self._get_coords(loc[0])
             except IndexError:
                 self.db.add_unknown_location(loc[0])
                 print(
                     f"WARNING: {loc[0]} could not be found. Added to unknown locations."
                 )
                 continue
-            except ValueError:
-                print(f"WARNING: {loc[0]} could not be found.")
+            except ValueError as err:
+                print(str(err))
                 continue
             location_info.append(
                 {
@@ -104,8 +98,11 @@ class Document:
                     "count": count,
                     "lon": lon,
                     "lat": lat,
+                    "class": location_class,
+                    "type": location_type,
                     "has_fogg": loc[1],
                 }
             )
-
-        return location_info
+        # remove uncommon or unwanted locations
+        filter_locations = self.db.get_filter_locations()
+        return [l for l in location_info if l["location"] in filter_locations]

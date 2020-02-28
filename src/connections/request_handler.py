@@ -3,6 +3,8 @@ import urllib.request
 
 from bs4 import BeautifulSoup as Soup
 
+OPEN_STREET_URL = "https://nominatim.openstreetmap.org"
+
 
 class RequestHandler:
     @staticmethod
@@ -51,3 +53,18 @@ class RequestHandler:
         web_page = response.read()
         text = self._clean_text(web_page)
         return text
+
+    def get_location_info(self, location):
+        location = location.replace(" ", "-")
+        # ping open street api
+        url = f"{OPEN_STREET_URL}/search?q='{location}'&format=json"
+        response = self.call(url, "GET")
+        response_dict = json.loads(response.read().decode("utf-8"))
+        # get first location returned
+        lon, lat, location_class, location_type = (
+            response_dict[0]["lon"],
+            response_dict[0]["lat"],
+            response_dict[0]["class"],
+            response_dict[0]["type"],
+        )
+        return lon, lat, location_class, location_type
