@@ -114,3 +114,27 @@ class Document:
         # remove uncommon or unwanted locations
         filter_locations = self.db.get_filter_locations()
         return [l for l in location_info if l["location"] in filter_locations]
+
+    def search_paragraphs(self, phrase: str) -> Tuple[str, float]:
+        """ Query the chapter to pull out the most similar paragraph to some input text
+
+        :param str phrase: Text to query paragraphs against
+        """
+        phrase = [
+            w.lemma_
+            for w in nlp(phrase)
+            if not (w.is_space or w.is_punct or w.is_digit or w.is_stop)
+        ]
+        print(phrase)
+        # convert the query to LSI space
+        vec_bow = self.dictionary.doc2bow(phrase)
+        vec_lsi = self.model[vec_bow]
+        # index against the corpus for comparison
+        index = similarities.MatrixSimilarity(self.model[self.corpus])
+        # perform a similarity query against the corpus
+        sims = index[vec_lsi]
+        sims = sorted(enumerate(sims), key=lambda item: -item[1])
+        if sims[0][1] < 0.01:
+            return "", 0
+        else:
+            return self.paragraphs[sims[0][0]].text.text, sims[0][1]
