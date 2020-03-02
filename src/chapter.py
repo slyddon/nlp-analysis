@@ -43,6 +43,9 @@ class Chapter:
         """ Extract the chapter topics using Latent Semantic Indexing
 
         - Perform a Singular Value Decomposition on the chapter corpus
+            - Create a matrix of word counts per document
+            - Group both documents that contain similar words and words that occur in a similar set of documents
+            - Reduce the number of rows while preserving the similarity structure among columns
 
         """
         # build a gensim dictionary of words
