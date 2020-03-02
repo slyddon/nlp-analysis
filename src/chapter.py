@@ -1,26 +1,8 @@
 from typing import List
 
-import spacy
-from spacy.pipeline import EntityRuler
-import gensim.corpora as corpora
-import gensim.models as models
-
 from . import Paragraph
+from .utils import _build_corpus, _build_lsi_model, nlp
 
-nlp = spacy.load("en")
-ruler = EntityRuler(nlp, overwrite_ents=True)
-patterns = [
-    {
-        "label": "PERSON",
-        "pattern": [{"TEXT": {"REGEX": r"Phileas|Mr\.?"}}, {"LOWER": "fogg"}],
-    },
-    {"label": "PERSON", "pattern": "Fogg"},
-    {"label": "PERSON", "pattern": "Passepartout"},
-    {"label": "PERSON", "pattern": "Fix"},
-    {"label": "GPE", "pattern": "Calcutta"},
-]
-ruler.add_patterns(patterns)
-nlp.add_pipe(ruler)
 
 
 class Chapter:
@@ -28,7 +10,16 @@ class Chapter:
         self.text = text.strip()
         self.paragraphs = self._get_paragraphs()
 
-    def _get_paragraphs(self) -> List[Paragraph]:
+        # build a gensim dictionary of words
+        dictionary, corpus = _build_corpus(self.paragraphs)
+        self.dictionary = dictionary
+        self.corpus = corpus
+        # build the lsi model
+        if len(dictionary) > 0:
+            self.model = _build_lsi_model(dictionary, corpus, num_topics)
+        else:
+            self.model = None
+
         """ Split chapter into paragraphs
 
         """
@@ -39,26 +30,11 @@ class Chapter:
         ]
         return paragraphs
 
-    def get_topics(self, num_topics: int = 10, num_words: int = 10) -> List:
-        """ Extract the chapter topics using Latent Semantic Indexing
+    def get_topics(self, num_words: int = 10) -> List:
+        """ Extract the chapter topics generated from Latent Semantic Indexing
 
-        - Perform a Singular Value Decomposition on the chapter corpus
-            - Create a matrix of word counts per document
-            - Group both documents that contain similar words and words that occur in a similar set of documents
-            - Reduce the number of rows while preserving the similarity structure among columns
-
+        :param int num_words: Number of words to include in each topic
         """
-        # build a gensim dictionary of words
-        dictionary = corpora.Dictionary([p.extract_lemma() for p in self.paragraphs])
-        # filter out common and infrequent words
-        dictionary.filter_extremes(no_below=len(self.paragraphs) // 10)
-        # convert the corpus to a bag of words model
-        corpus = [
-            dictionary.doc2bow(p) for p in [p.extract_lemma() for p in self.paragraphs]
-        ]
-        # weight the corpus according to Term Frequency / Inverse Document Frequency
-        tfidf = models.TfidfModel(corpus)
-        tfidf_corpus = tfidf[corpus]
-        # Latent Semantic Index Transformation
-        lsi = models.LsiModel(tfidf_corpus, id2word=dictionary, num_topics=num_topics)
-        return lsi.show_topics(num_words=num_words, formatted=False)
+        if self.model is None:
+            return []
+        return self.model.show_topics(num_words=num_words, formatted=False)

@@ -4,8 +4,10 @@ from collections import Counter
 from typing import Dict, List, Tuple
 
 import pandas as pd
+from gensim import similarities
 
 from . import Chapter, DatabaseConnection, Paragraph, RequestHandler
+from .utils import _build_corpus, _build_lsi_model, nlp
 
 HOST = "db"
 ALLOWED_METADATA = ["title", "author", "release date", "last updated", "language"]
@@ -18,6 +20,12 @@ class Document:
         self.chapters = self._get_chapters()
         self.paragraphs = self._get_paragraphs()
 
+        # build a gensim dictionary of words
+        dictionary, corpus = _build_corpus(self.paragraphs)
+        self.dictionary = dictionary
+        self.corpus = corpus
+        # build the lsi model
+        self.model = _build_lsi_model(dictionary, corpus, num_topics)
         self.db = DatabaseConnection(host=HOST)
 
     def _get_metadata(self):
