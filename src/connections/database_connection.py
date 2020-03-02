@@ -37,7 +37,9 @@ class DatabaseConnection:
             CREATE TABLE IF NOT EXISTS locations (
                 name varchar,
                 lon numeric,
-                lat numeric
+                lat numeric,
+                class varchar,
+                type varchar
             )
             """
         )
@@ -84,19 +86,22 @@ class DatabaseConnection:
         )
         return cur.fetchall()
 
-    def add_location(self, location: Tuple[str, float, float]) -> None:
+    def add_location(self, location: Tuple[str, float, float, str, str]) -> None:
         """ Add location to db
 
-        :param iterable(str, numeric, numeric) location: (name, loc, lat)
+        :param iterable(str, numeric, numeric, str, str) location: (name, lon, lat, class, type)
         """
         sql = """
-            INSERT INTO locations (name, lon, lat)
-            VALUES(%s, %s, %s)
+            INSERT INTO locations (name, lon, lat, class, type)
+            VALUES(%s, %s, %s, %s, %s)
         """
         cur = self.conn.cursor()
         cur.execute(sql, location)
         self.conn.commit()
         cur.close()
+
+        if location[0] in self.get_unknown_locations():
+            self._remove_unknown_location(location[0])
 
     def get_locations(self) -> List[str]:
         """ Get names of all locations in db
@@ -112,11 +117,11 @@ class DatabaseConnection:
         )
         return [l[0] for l in cur.fetchall()]
 
-    def get_location(self, location: str) -> Tuple[str, float, float]:
+    def get_location(self, location: str) -> Tuple[str, float, float, str, str]:
         """ Get location information
 
         :param str location: location to retrieve
-        :return tuple: (name, loc, lat)
+        :return tuple: (name, loc, lat, class, type)
         """
         cur = self.conn.cursor()
         cur.execute(
@@ -143,6 +148,20 @@ class DatabaseConnection:
         self.conn.commit()
         cur.close()
 
+    def _remove_unknown_location(self, location: str) -> None:
+        """ Remove location from unknow list
+
+        :param str location: name
+        """
+        sql = """
+            DELETE FROM unknown_locations WHERE
+            name = %s
+        """
+        cur = self.conn.cursor()
+        cur.execute(sql, (location,))
+        self.conn.commit()
+        cur.close()
+
     def get_unknown_locations(self) -> List[str]:
         """ Get names of all unknown locations in db
 
@@ -153,6 +172,41 @@ class DatabaseConnection:
             """
             SELECT name
             FROM unknown_locations
+            """
+        )
+        return [l[0] for l in cur.fetchall()]
+
+    def get_filter_locations(self) -> List[str]:
+        """ Get names of locations that appear sufficiently 
+            frequently and are not of an undesired type
+
+        :return iterable(str): location names
+        """
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT right_t.name 
+            FROM (
+                SELECT class, type 
+                FROM (
+                    SELECT class, type, Count(name) as count 
+                    FROM locations 
+                    GROUP BY class, type
+                ) AS grouped 
+                WHERE (
+                    count > 5 AND 
+                    type != 'continent' AND 
+                    class != 'highway'
+                ) OR (
+                    class IN ('natural', 'waterway')
+                ) OR (
+                    type IN ('sea', 'ocean', 'lighthouse')
+                )
+            ) AS left_t 
+            LEFT OUTER JOIN (
+                SELECT * from locations
+            ) AS right_t 
+            ON (right_t.class = left_t.class AND right_t.type = left_t.type)
             """
         )
         return [l[0] for l in cur.fetchall()]
