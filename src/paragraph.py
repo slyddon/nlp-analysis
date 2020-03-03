@@ -2,7 +2,7 @@ from typing import Dict, List
 
 
 class Paragraph:
-    def __init__(self, text):
+    def __init__(self, text: str):
         self.text = text
         self._get_ents()
 
@@ -18,7 +18,12 @@ class Paragraph:
         self.people = [item.text for item in ents if item.label_ in ["PERSON"]]
         self.mentions_fogg = any(["Fogg" in p for p in self.people])
 
-    def extract_lemma(self, word_len=3) -> List[str]:
+    def extract_lemma(self, word_len: int = 3) -> List[str]:
+        """ Extract the lemmatized words in the paragraph
+
+        :param int word_len: Length of words to limit
+        :return:
+        """
         return [
             w.lemma_
             for w in self.text

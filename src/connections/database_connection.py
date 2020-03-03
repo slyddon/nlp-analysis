@@ -10,7 +10,7 @@ class DatabaseConnection:
         self.conn = _conn
 
         # init tables
-        self._create_loc_table()
+        self._create_tables()
 
     @staticmethod
     def _connect(
@@ -27,7 +27,7 @@ class DatabaseConnection:
         conn = psycopg2.connect(host=host, port=port, user=user, password=password)
         return conn
 
-    def _create_loc_table(self) -> None:
+    def _create_tables(self) -> None:
         """ Create location and unknown locations db tables
 
         """
@@ -149,7 +149,7 @@ class DatabaseConnection:
         cur.close()
 
     def _remove_unknown_location(self, location: str) -> None:
-        """ Remove location from unknow list
+        """ Remove location from unknown list
 
         :param str location: name
         """
