@@ -5,6 +5,7 @@
 .local
 .cache
 Untitled*.ipynb
+test_*.ipynb
 
 # data
 data/*.txt
@@ -12,6 +13,8 @@ data/*.txt
 # vscode
 .devcontainer.json
 .bash_history
+.vscode
 
 # pycharm
 __pycache__
+.idea

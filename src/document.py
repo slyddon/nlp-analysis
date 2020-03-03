@@ -29,7 +29,7 @@ class Document:
         self.db = DatabaseConnection(host=HOST)
         self.rq = RequestHandler()
 
-    def _get_metadata(self, text: str):
+    def _get_metadata(self, text: str) -> None:
         """ Extract relevant metadata fields
 
         """
@@ -120,7 +120,7 @@ class Document:
         return [l for l in location_info if l["location"] in filter_locations]
 
     def search_paragraphs(self, phrase: str) -> Tuple[str, float]:
-        """ Query the chapter to pull out the most similar paragraph to some input text
+        """ Query the document to pull out the most similar paragraph to some input text
 
         :param str phrase: Text to query paragraphs against
         """

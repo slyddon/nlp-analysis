@@ -44,4 +44,5 @@ class Chapter:
         """
         if self.model is None:
             return []
-        return self.model.show_topics(num_words=num_words, formatted=False)
+        else:
+            return self.model.show_topics(num_words=num_words, formatted=False)
