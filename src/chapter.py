@@ -1,7 +1,10 @@
-from typing import List, Tuple
+import logging
+from typing import List
 
 from . import Paragraph
 from .utils import _build_corpus, _build_lsi_model, nlp
+
+logger = logging.getLogger(__name__)
 
 
 class Chapter:
@@ -30,6 +33,7 @@ class Chapter:
         """ Split chapter into paragraphs
 
         """
+        logger.debug("Splitting chapter into paragraphs")
         split_text = [t.strip().replace("\n", " ") for t in text.strip().split("\n\n")]
         self.chapter_header = split_text[0]
         paragraphs = [

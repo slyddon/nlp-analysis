@@ -1,9 +1,12 @@
 import json
+import logging
 import urllib.request
 
 from bs4 import BeautifulSoup as Soup
 
 OPEN_STREET_URL = "https://nominatim.openstreetmap.org"
+
+logger = logging.getLogger(__name__)
 
 
 class RequestHandler:
@@ -17,6 +20,7 @@ class RequestHandler:
         :raises urllib.error.HTTPError:
         :return http.client.HTTPResponse:
         """
+        logger.debug("Making HTTP request")
         try:
             kwargs = {}
 
@@ -27,9 +31,10 @@ class RequestHandler:
 
             request = urllib.request.Request(url, method=method, **kwargs)
             response = urllib.request.urlopen(request)
-
+            logger.debug("Response status %s" % response.status)
             return response
         except urllib.error.HTTPError as err:
+            logger.error(str(err))
             raise err
 
     @staticmethod

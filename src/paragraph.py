@@ -1,4 +1,7 @@
+import logging
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 class Paragraph:
@@ -35,3 +38,16 @@ class Paragraph:
                 or len(w.lemma_) < word_len
             )
         ]
+
+    def match_location_to_people(self) -> List[Dict]:
+        match = []
+        for s in self.text.sents:
+            sentence_match = {}
+            for w in s:
+                if w.pos_ in ["PROPN", "NOUN"]:
+                    if w.dep_ == "nsubj":
+                        sentence_match["subject"] = w.text
+                    elif w.dep_ in ["obj", "dobj"]:
+                        sentence_match["object"] = w.text
+            match.append(sentence_match)
+        return match
