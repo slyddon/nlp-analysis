@@ -1,14 +1,17 @@
-import psycopg2
+import logging
 from typing import List, Tuple
+
+import psycopg2
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseConnection:
     def __init__(
         self, user="postgres", password="password", host="XX.XX.XXX.XX", port=5432
     ):
-        _conn = self._connect(user, password, host, port)
-        self.conn = _conn
-
+        self._conn = self._connect(user, password, host, port)
+        self._check_connection()
         # init tables
         self._create_tables()
 
@@ -27,11 +30,19 @@ class DatabaseConnection:
         conn = psycopg2.connect(host=host, port=port, user=user, password=password)
         return conn
 
+    def _check_connection(self) -> None:
+        with self._conn.cursor() as cur:
+            cur.execute("""SELECT version()""")
+            record = cur.fetchone()
+            logger.info("Connected to %s" % record)
+        return None
+
     def _create_tables(self) -> None:
         """ Create location and unknown locations db tables
 
         """
-        cur = self.conn.cursor()
+        logger.debug("Creating tables")
+        cur = self._conn.cursor()
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS locations (
@@ -50,7 +61,7 @@ class DatabaseConnection:
             )
             """
         )
-        self.conn.commit()
+        self._conn.commit()
         cur.close()
 
     def copy_from_csv(self, file: str, table: str) -> None:
@@ -60,14 +71,14 @@ class DatabaseConnection:
         :param str table: table to copy to
         """
         copy_sql = f"""
-           COPY {table} 
+           COPY {table}
            FROM stdin WITH CSV HEADER
            DELIMITER as ','
            """
-        cur = self.conn.cursor()
+        cur = self._conn.cursor()
         with open(file, "r") as f:
             cur.copy_expert(sql=copy_sql, file=f)
-        self.conn.commit()
+        self._conn.commit()
         cur.close()
 
     def get_table_names(self) -> List[str]:
@@ -75,7 +86,7 @@ class DatabaseConnection:
 
         :return iterable(str): table names
         """
-        cur = self.conn.cursor()
+        cur = self._conn.cursor()
         cur.execute(
             """
             SELECT table_name
@@ -95,9 +106,9 @@ class DatabaseConnection:
             INSERT INTO locations (name, lon, lat, class, type)
             VALUES(%s, %s, %s, %s, %s)
         """
-        cur = self.conn.cursor()
+        cur = self._conn.cursor()
         cur.execute(sql, location)
-        self.conn.commit()
+        self._conn.commit()
         cur.close()
 
         if location[0] in self.get_unknown_locations():
@@ -108,7 +119,7 @@ class DatabaseConnection:
 
         :return iterable(str): location names
         """
-        cur = self.conn.cursor()
+        cur = self._conn.cursor()
         cur.execute(
             """
             SELECT name
@@ -123,7 +134,7 @@ class DatabaseConnection:
         :param str location: location to retrieve
         :return tuple: (name, loc, lat, class, type)
         """
-        cur = self.conn.cursor()
+        cur = self._conn.cursor()
         cur.execute(
             """
             SELECT *
@@ -143,9 +154,9 @@ class DatabaseConnection:
             INSERT INTO unknown_locations (name)
             VALUES(%s)
         """
-        cur = self.conn.cursor()
+        cur = self._conn.cursor()
         cur.execute(sql, (location,))
-        self.conn.commit()
+        self._conn.commit()
         cur.close()
 
     def _remove_unknown_location(self, location: str) -> None:
@@ -157,9 +168,9 @@ class DatabaseConnection:
             DELETE FROM unknown_locations WHERE
             name = %s
         """
-        cur = self.conn.cursor()
+        cur = self._conn.cursor()
         cur.execute(sql, (location,))
-        self.conn.commit()
+        self._conn.commit()
         cur.close()
 
     def get_unknown_locations(self) -> List[str]:
@@ -167,7 +178,7 @@ class DatabaseConnection:
 
         :return iterable(str): location names
         """
-        cur = self.conn.cursor()
+        cur = self._conn.cursor()
         cur.execute(
             """
             SELECT name
@@ -177,35 +188,35 @@ class DatabaseConnection:
         return [l[0] for l in cur.fetchall()]
 
     def get_filter_locations(self) -> List[str]:
-        """ Get names of locations that appear sufficiently 
+        """ Get names of locations that appear sufficiently
             frequently and are not of an undesired type
 
         :return iterable(str): location names
         """
-        cur = self.conn.cursor()
+        cur = self._conn.cursor()
         cur.execute(
             """
-            SELECT right_t.name 
+            SELECT right_t.name
             FROM (
-                SELECT class, type 
+                SELECT class, type
                 FROM (
-                    SELECT class, type, Count(name) as count 
-                    FROM locations 
+                    SELECT class, type, Count(name) as count
+                    FROM locations
                     GROUP BY class, type
-                ) AS grouped 
+                ) AS grouped
                 WHERE (
-                    count > 5 AND 
-                    type != 'continent' AND 
+                    count > 5 AND
+                    type != 'continent' AND
                     class != 'highway'
                 ) OR (
                     class IN ('natural', 'waterway')
                 ) OR (
                     type IN ('sea', 'ocean', 'lighthouse')
                 )
-            ) AS left_t 
+            ) AS left_t
             LEFT OUTER JOIN (
                 SELECT * from locations
-            ) AS right_t 
+            ) AS right_t
             ON (right_t.class = left_t.class AND right_t.type = left_t.type)
             """
         )

@@ -24,7 +24,7 @@ nlp.add_pipe(ruler)
 
 
 def _build_corpus(
-    paragraphs: List[Paragraph]
+    paragraphs: List[Paragraph],
 ) -> Tuple[corpora.Dictionary, models.TfidfModel]:
     """ Build the corpus and dictionary for the chapter
 
@@ -54,7 +54,7 @@ def _build_lsi_model(
         - Create a matrix of word counts per document
         - Group both documents that contain similar words and words that occur in a similar set of documents
         - Reduce the number of rows while preserving the similarity structure among columns
-    
+
     :param corpora.Dictionary dictionary: Dictionary of words
     :param models.TfidfModel corpus: Corpus of text
     """
