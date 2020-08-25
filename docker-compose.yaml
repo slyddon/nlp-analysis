@@ -18,6 +18,8 @@ services:
     container_name: 80-days-db
     ports:
       - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=password
     volumes:
       - pgdata:/var/lib/postgresql/data
 volumes:

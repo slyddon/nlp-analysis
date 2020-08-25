@@ -6,6 +6,9 @@ matplotlib
 cartopy
 psycopg2
 beautifulsoup4
+scikit-learn=0.21*
 nb_black
 isort
 watermark
+flake8
+jupyterlab-git
